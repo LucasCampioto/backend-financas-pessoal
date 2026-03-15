@@ -16,20 +16,24 @@ const app = express();
 // Em desenvolvimento aceita localhost/127.0.0.1 em qualquer porta; em produção usa FRONTEND_ORIGIN.
 function corsOrigin(origin, callback) {
   const allowed = process.env.FRONTEND_ORIGIN;
-  if (process.env.NODE_ENV === 'production') {
-    const list = allowed ? allowed.split(',').map((s) => s.trim()) : [];
-    if (origin && list.includes(origin)) return callback(null, origin);
-    if (!origin) return callback(null, list[0] || true);
-    return callback(null, false);
+  const list = allowed ? allowed.split(',').map((s) => s.trim()) : [];
+
+  // Sem origem (ex: Postman, mobile, server-to-server): sempre permite
+  if (!origin) return callback(null, true);
+
+  // Se FRONTEND_ORIGIN estiver definida, verifica se a origem está na lista
+  if (list.length > 0) {
+    if (list.includes(origin)) return callback(null, origin);
+    return callback(new Error(`Origem não permitida pelo CORS: ${origin}`));
   }
-  // Desenvolvimento: permite localhost e 127.0.0.1 em qualquer porta
-  if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-    return callback(null, true);
+
+  // FRONTEND_ORIGIN não definida: em dev permite localhost; em prod permite tudo (temporário)
+  if (process.env.NODE_ENV !== 'production') {
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
   }
-  if (allowed) {
-    const list = allowed.split(',').map((s) => s.trim());
-    if (list.includes(origin)) return callback(null, true);
-  }
+
   return callback(null, true);
 }
 
