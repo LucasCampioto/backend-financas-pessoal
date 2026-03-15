@@ -11,10 +11,11 @@ const COOKIE_NAME = 'token';
 const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
 
 function getCookieOptions() {
+  const isProd = process.env.NODE_ENV === 'production';
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
     maxAge: COOKIE_MAX_AGE_MS,
   };
 }
@@ -68,10 +69,11 @@ async function postLogin(req, res) {
 }
 
 function postLogout(_req, res) {
+  const isProd = process.env.NODE_ENV === 'production';
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
   });
   return res.status(204).send();
 }
