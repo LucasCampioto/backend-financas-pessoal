@@ -8,6 +8,8 @@ const {
   deleteCreditCardByMonthAndUserId,
   findAllByUserId,
   updateByIdAndUserId,
+  togglePayment,
+  findRecurringByUserId,
 } = require('../adapters/mongodb/expense');
 const { getByUserId } = require('../adapters/mongodb/taxConfig');
 const { findAllByUserId: findAllRevenuesByUserId } = require('../adapters/mongodb/revenue');
@@ -57,6 +59,11 @@ function handleValidation(req, res, next) {
   next();
 }
 
+router.get('/recurring', requireAuth, async (req, res) => {
+  const expenses = await findRecurringByUserId(req.user._id);
+  return res.status(200).json(expenses);
+});
+
 router.post('/', requireAuth, expenseItemValidation, handleValidation, async (req, res) => {
   const userId = req.user._id;
   const { description, amount, date, category, bank, recurring, recurrenceEndMonth } = req.body;
@@ -99,6 +106,20 @@ router.put('/:id', requireAuth, expenseItemValidation, handleValidation, async (
     recurring: Boolean(recurring),
     recurrenceEndMonth: recurrenceEndMonth || null,
   });
+  if (!expense) return notFound(res, 'Despesa não encontrada');
+  return res.status(200).json(expense);
+});
+
+router.patch('/:id/payment/:month', requireAuth, async (req, res) => {
+  const { id, month } = req.params;
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    return badRequest(res, 'month deve ser YYYY-MM');
+  }
+  const { paid } = req.body;
+  if (typeof paid !== 'boolean') {
+    return badRequest(res, 'O campo paid deve ser um boolean');
+  }
+  const expense = await togglePayment(id, req.user._id, month, paid);
   if (!expense) return notFound(res, 'Despesa não encontrada');
   return res.status(200).json(expense);
 });
